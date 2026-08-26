@@ -76,15 +76,23 @@ private extension ViewType {
         .audio,
     ]
 
-    static let secondaryItems: [ViewType] = [
-        .settings,
-        .license,
-    ]
+    static var secondaryItems: [ViewType] {
+        #if LOCAL_BUILD
+            return [.settings]
+        #else
+            return [.settings, .license]
+        #endif
+    }
 
     static func assertSidebarItemsCoverAllCases() {
         #if DEBUG
             let sidebarItems = primaryItems + secondaryItems
-            assert(Set(sidebarItems) == Set(allCases) && sidebarItems.count == allCases.count)
+            #if LOCAL_BUILD
+                let expectedItems = allCases.filter { $0 != .license }
+            #else
+                let expectedItems = allCases
+            #endif
+            assert(Set(sidebarItems) == Set(expectedItems) && sidebarItems.count == expectedItems.count)
         #endif
     }
 

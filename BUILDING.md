@@ -19,6 +19,14 @@ open ~/Downloads/VoiceInk.app
 
 It uses `LocalBuild.xcconfig`, `VoiceInk.local.entitlements`, and the `LOCAL_BUILD` Swift flag. Without an override, it uses the only available Apple Development identity or falls back to ad-hoc signing when none or multiple are found.
 
+Local builds have unrestricted app access and omit the trial, license activation, purchase prompts, and VoiceInk Pro navigation used by official prebuilt releases.
+
+### Download a GitHub Actions build
+
+1. Open the **Actions** tab in your fork.
+2. Select **Build Local App** and choose **Run workflow**.
+3. Download the `VoiceInk-local` artifact after the workflow completes.
+
 Choose an identity explicitly:
 
 ```bash

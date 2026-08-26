@@ -31,6 +31,12 @@ final class MainWindowNavigation: ObservableObject {
     }
 
     func navigate(to destination: ViewType) {
+        #if LOCAL_BUILD
+            guard destination != .license else {
+                selectedView = .settings
+                return
+            }
+        #endif
         selectedView = destination
     }
 }
@@ -102,7 +108,11 @@ struct ContentView: View {
         case .settings:
             SettingsView()
         case .license:
-            LicenseManagementView()
+            #if LOCAL_BUILD
+                SettingsView()
+            #else
+                LicenseManagementView()
+            #endif
         }
     }
 }

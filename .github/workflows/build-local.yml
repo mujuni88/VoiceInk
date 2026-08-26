@@ -1,0 +1,30 @@
+name: Build Local App
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Build unrestricted local app
+        run: make local LOCAL_CODESIGN_IDENTITY=-
+
+      - name: Package app
+        run: ditto -c -k --sequesterRsrc --keepParent "$HOME/Downloads/VoiceInk.app" VoiceInk-local.zip
+
+      - name: Upload app
+        uses: actions/upload-artifact@v4
+        with:
+          name: VoiceInk-local
+          path: VoiceInk-local.zip
+          if-no-files-found: error
+          retention-days: 30
