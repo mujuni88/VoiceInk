@@ -15,8 +15,14 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
+      - name: Cache native dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/VoiceInk-Dependencies
+          key: voiceink-native-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Makefile') }}
+
       - name: Build unrestricted local app
-        run: make local LOCAL_CODESIGN_IDENTITY=- LOCAL_XCODEBUILD_FLAGS=-skipPackagePluginValidation
+        run: make local LOCAL_CODESIGN_IDENTITY=- LOCAL_XCODEBUILD_FLAGS='-skipPackagePluginValidation -skipMacroValidation'
 
       - name: Package app
         run: ditto -c -k --sequesterRsrc --keepParent "$HOME/Downloads/VoiceInk.app" VoiceInk-local.zip
