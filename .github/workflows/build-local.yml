@@ -16,7 +16,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build unrestricted local app
-        run: make local LOCAL_CODESIGN_IDENTITY=-
+        run: make local LOCAL_CODESIGN_IDENTITY=- LOCAL_XCODEBUILD_FLAGS=-skipPackagePluginValidation
 
       - name: Package app
         run: ditto -c -k --sequesterRsrc --keepParent "$HOME/Downloads/VoiceInk.app" VoiceInk-local.zip
