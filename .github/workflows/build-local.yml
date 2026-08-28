@@ -21,10 +21,10 @@ jobs:
           path: ~/VoiceInk-Dependencies
           key: voiceink-native-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Makefile') }}
 
-      # Sign with a stable self-signed identity so macOS TCC grants
+      # Import a stable self-signed identity so macOS TCC grants
       # (Accessibility, Input Monitoring, Screen Recording) survive rebuilds.
       # Ad-hoc signatures change every build, which resets those permissions.
-      # Falls back to ad-hoc signing when the secrets are not configured.
+      # Skipped when the secrets are not configured (build stays ad-hoc).
       - name: Import signing certificate
         id: signing
         env:
@@ -32,8 +32,8 @@ jobs:
           SIGNING_CERT_PASSWORD: ${{ secrets.LOCAL_SIGNING_CERT_PASSWORD }}
         run: |
           if [ -z "$SIGNING_CERT_P12" ]; then
-            echo "No signing certificate configured; using ad-hoc signing."
-            echo "identity=-" >> "$GITHUB_OUTPUT"
+            echo "No signing certificate configured; keeping ad-hoc signing."
+            echo "identity=" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           KEYCHAIN_PATH="$RUNNER_TEMP/local-signing.keychain-db"
@@ -48,20 +48,27 @@ jobs:
             -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           EXISTING_KEYCHAINS=$(security list-keychains -d user | tr -d '" ')
           security list-keychains -d user -s "$KEYCHAIN_PATH" $EXISTING_KEYCHAINS
-          # xcodebuild only accepts identities that are trusted for code signing,
-          # so trust the self-signed cert in the system keychain (passwordless sudo).
-          security find-certificate -c "VoiceInk Local Signing" -p "$KEYCHAIN_PATH" \
-            > "$RUNNER_TEMP/signing-cert.pem"
-          sudo security add-trusted-cert -d -r trustRoot -p codeSign \
-            -k /Library/Keychains/System.keychain "$RUNNER_TEMP/signing-cert.pem"
           rm "$RUNNER_TEMP/signing.p12"
           echo "identity=VoiceInk Local Signing" >> "$GITHUB_OUTPUT"
 
       - name: Build unrestricted local app
-        run: make local LOCAL_CODESIGN_IDENTITY='${{ steps.signing.outputs.identity }}' LOCAL_XCODEBUILD_FLAGS='-skipPackagePluginValidation -skipMacroValidation'
+        run: make local LOCAL_CODESIGN_IDENTITY=- LOCAL_XCODEBUILD_FLAGS='-skipPackagePluginValidation -skipMacroValidation'
 
-      - name: Verify signature identity
-        run: codesign -dvv "$HOME/Downloads/VoiceInk.app" 2>&1 | grep -E "^Authority|^TeamIdentifier" || true
+      # xcodebuild silently falls back to ad-hoc for identities it does not
+      # consider trusted, so re-sign the finished bundle with codesign, which
+      # accepts the self-signed identity. --preserve-metadata keeps each nested
+      # component's entitlements intact.
+      - name: Re-sign with stable identity
+        if: steps.signing.outputs.identity != ''
+        run: |
+          codesign --force --deep --preserve-metadata=entitlements,flags \
+            --timestamp=none --sign '${{ steps.signing.outputs.identity }}' \
+            "$HOME/Downloads/VoiceInk.app"
+          codesign --verify --deep --strict "$HOME/Downloads/VoiceInk.app"
+          codesign -dvv "$HOME/Downloads/VoiceInk.app" 2>&1 | grep -E "^Authority|^Signature"
+          codesign -dvv "$HOME/Downloads/VoiceInk.app" 2>&1 \
+            | grep -q '^Authority=${{ steps.signing.outputs.identity }}$' \
+            || { echo "App is not signed with the stable identity"; exit 1; }
 
       - name: Package app
         run: ditto -c -k --sequesterRsrc --keepParent "$HOME/Downloads/VoiceInk.app" VoiceInk-local.zip
