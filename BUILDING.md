@@ -27,6 +27,26 @@ Local builds have unrestricted app access and omit the trial, license activation
 2. Select **Build Local App** and choose **Run workflow**.
 3. Download the `VoiceInk-local` artifact after the workflow completes.
 
+The workflow also publishes the same zip to the rolling `local-build` GitHub
+release, which the Homebrew cask below installs from.
+
+### Install with Homebrew
+
+After the **Build Local App** workflow has run at least once:
+
+```bash
+brew tap mujuni88/voiceink https://github.com/mujuni88/VoiceInk.git
+brew install --cask --no-quarantine voiceink-local
+```
+
+`--no-quarantine` is required because local builds are ad-hoc signed and
+Gatekeeper would otherwise refuse to open the app. To upgrade, re-run the
+workflow and then:
+
+```bash
+brew reinstall --cask --no-quarantine voiceink-local
+```
+
 Choose an identity explicitly:
 
 ```bash
