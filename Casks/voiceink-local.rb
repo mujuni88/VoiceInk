@@ -8,7 +8,7 @@ cask "voiceink-local" do
   homepage "https://github.com/mujuni88/VoiceInk"
 
   conflicts_with cask: "voiceink"
-  depends_on macos: ">= :sonoma"
+  depends_on macos: :sonoma
 
   app "VoiceInk.app"
 
